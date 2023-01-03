@@ -1,8 +1,12 @@
 package fr.g123k.deviceapps;
 
+import static fr.g123k.deviceapps.utils.Base64Utils.encodeToBase64;
+import static fr.g123k.deviceapps.utils.DrawableUtils.getBitmapFromDrawable;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.ComponentInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -35,9 +39,6 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-
-import static fr.g123k.deviceapps.utils.Base64Utils.encodeToBase64;
-import static fr.g123k.deviceapps.utils.DrawableUtils.getBitmapFromDrawable;
 
 /**
  * DeviceAppsPlugin
@@ -209,7 +210,16 @@ public class DeviceAppsPlugin implements
         final List<String> installedApps = new ArrayList<>(apps.size());
 
         for (ResolveInfo resolveInfo : apps) {
-            installedApps.add(resolveInfo.resolvePackageName);
+            final ComponentInfo ci = resolveInfo.activityInfo != null ? resolveInfo.activityInfo
+                    : (resolveInfo.serviceInfo != null ? resolveInfo.serviceInfo :
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT ? resolveInfo.providerInfo : null
+            );
+            if (ci != null) {
+                final ApplicationInfo ai = ci.applicationInfo;
+                if (ai != null) {
+                    installedApps.add(ai.packageName);
+                }
+            }
         }
 
         return installedApps;
