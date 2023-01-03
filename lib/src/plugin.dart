@@ -62,6 +62,36 @@ class DeviceApps {
     }
   }
 
+  static Future<List<String>> getAppsByCategory(String categoryName) async {
+    try {
+      final Object apps = await _methodChannel.invokeMethod(
+          'getAppsByCategory', <String, String>{'category_name': categoryName});
+
+      if (apps is Iterable) {
+        List<String> list = <String>[];
+        for (Object app in apps) {
+          if (app is String) {
+            try {
+              list.add(app);
+            } catch (e, trace) {
+              if (e is AssertionError) {
+                print('[DeviceApps] Unable to add the following app: $app');
+              } else {
+                print('[DeviceApps] $e $trace');
+              }
+            }
+          }
+        }
+        return list;
+      } else {
+        return List<String>.empty();
+      }
+    } catch (err) {
+      print(err);
+      return List<String>.empty();
+    }
+  }
+
   /// Provide all information for a given app by its [packageName]
   /// [includeAppIcon] will also include the icon for the app.
   /// To get it, you have to cast the object to [ApplicationWithIcon].
