@@ -1,10 +1,15 @@
 package fr.g123k.deviceapps;
 
+import static fr.g123k.deviceapps.utils.Base64Utils.encodeToBase64;
+import static fr.g123k.deviceapps.utils.DrawableUtils.getBitmapFromDrawable;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.ComponentInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -34,9 +39,6 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-
-import static fr.g123k.deviceapps.utils.Base64Utils.encodeToBase64;
-import static fr.g123k.deviceapps.utils.DrawableUtils.getBitmapFromDrawable;
 
 /**
  * DeviceAppsPlugin
@@ -136,6 +138,14 @@ public class DeviceAppsPlugin implements
                     result.success(uninstallApp(packageName));
                 }
                 break;
+            case "getAppsByCategory":
+                if (!call.hasArgument("category_name") || TextUtils.isEmpty(call.argument("category_name").toString())) {
+                    result.error("ERROR", "Empty or null category name", null);
+                } else {
+                    final String categoryName = call.argument("category_name").toString();
+                    result.success(getInstalledAppsByCategory(categoryName));
+                }
+                break;
             default:
                 result.notImplemented();
         }
@@ -179,6 +189,37 @@ public class DeviceAppsPlugin implements
                     packageInfo.applicationInfo,
                     includeAppIcons);
             installedApps.add(map);
+        }
+
+        return installedApps;
+    }
+
+
+    private List<String> getInstalledAppsByCategory(final String categoryName) {
+        if (context == null) {
+            Log.e(LOG_TAG, "Context is null");
+            return new ArrayList<>(0);
+        }
+
+        final PackageManager packageManager = context.getPackageManager();
+
+        final Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(categoryName);
+
+        final List<ResolveInfo> apps = packageManager.queryIntentActivities(intent, 0);
+        final List<String> installedApps = new ArrayList<>(apps.size());
+
+        for (ResolveInfo resolveInfo : apps) {
+            final ComponentInfo ci = resolveInfo.activityInfo != null ? resolveInfo.activityInfo
+                    : (resolveInfo.serviceInfo != null ? resolveInfo.serviceInfo :
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT ? resolveInfo.providerInfo : null
+            );
+            if (ci != null) {
+                final ApplicationInfo ai = ci.applicationInfo;
+                if (ai != null) {
+                    installedApps.add(ai.packageName);
+                }
+            }
         }
 
         return installedApps;
